@@ -91,10 +91,12 @@ while True:
             try:
                 # get Bluetooth command
                 bytestring = uart0.readline()
-                substring = bytestring[2:14]
-                x, y, z = struct.unpack('3f', substring)
-                print(x, y, z)
-                lin_spd = y * SPD_GAIN
+                data_type = bytestring[:2].decode()
+                bin_value = bytestring[2:14]
+                if data_type == '!A':  # accelerometer data
+                    x, y, z = struct.unpack('3f', bin_value)
+                    print(x, y, z)
+                    lin_spd = y * SPD_GAIN
                 ang_spd = -x * SPD_GAIN
             except Exception as e:
                 lin_spd, ang_spd = 0, 0
