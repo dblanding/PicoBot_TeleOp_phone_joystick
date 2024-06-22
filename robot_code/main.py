@@ -97,7 +97,10 @@ while True:
                     x, y, z = struct.unpack('3f', bin_value)
                     print(x, y, z)
                     lin_spd = y * SPD_GAIN
-                ang_spd = -x * SPD_GAIN
+                    if y >= -0.1:
+                        ang_spd = -x * SPD_GAIN
+                    else:
+                        ang_spd = x * SPD_GAIN
             except Exception as e:
                 lin_spd, ang_spd = 0, 0
                 print(e)
