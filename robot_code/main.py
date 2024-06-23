@@ -15,12 +15,12 @@ import motors
 from odometer import Odometer
 from parameters import TICKS_PER_METER, TARGET_TICK_RATE, TURN_SPD, ANGLE_TOL, SPD_GAIN
 import struct
-from bno08x_rvc import BNO08x_RVC
+from bno055 import *
 # import VL53L0X
 
 # setup encoders
-enc_b = encoder.Encoder(0, Pin(14))
-enc_a = encoder.Encoder(1, Pin(12))
+enc_b = encoder.Encoder(0, Pin(8))
+enc_a = encoder.Encoder(1, Pin(6))
 
 # setup onboard LED
 led = machine.Pin("LED", machine.Pin.OUT)
@@ -51,13 +51,10 @@ tof1 = setup_tof_sensor(1, 10, 11)  # Right
 tof1.start()
 '''
 
-# set up uart1 for IMU communication
-uart1 = UART(1, baudrate=115200, tx=Pin(4), rx=Pin(5))
-uart1.init(rxbuf=2048)
-print(uart1)
-rvc = BNO08x_RVC(uart1)
-sleep(2) # wait for IMU to settle
-
+# set up bno055 IMU on i2c0
+i2c0 = I2C(0, sda=Pin(12), scl=Pin(13))
+imu = BNO055(i2c0)
+calibrated = False
 
 yaw_prev = 0
 N = 10  # number of 'fast' loop cycles per 'slow' loop
@@ -67,9 +64,9 @@ while True:
 
     # get IMU data every time through loop
     try:
-        yaw_degrees, *rest = rvc.heading
+        heading, *rest = imu.euler()
         # convert from degrees to radians
-        yaw = -yaw_degrees * math.pi / 180 
+        yaw = -heading * math.pi / 180 
         if yaw != yaw_prev:
             yaw_prev = yaw
     except Exception as e:
@@ -95,12 +92,9 @@ while True:
                 bin_value = bytestring[2:14]
                 if data_type == '!A':  # accelerometer data
                     x, y, z = struct.unpack('3f', bin_value)
-                    print(x, y, z)
+                    # print(x, y, z)
                     lin_spd = y * SPD_GAIN
-                    if y >= -0.1:
-                        ang_spd = -x * SPD_GAIN
-                    else:
-                        ang_spd = x * SPD_GAIN
+                    ang_spd = -x * SPD_GAIN
             except Exception as e:
                 lin_spd, ang_spd = 0, 0
                 print(e)
