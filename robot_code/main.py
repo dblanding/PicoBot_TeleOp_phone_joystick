@@ -26,8 +26,14 @@ enc_a = encoder.Encoder(1, Pin(6))
 led = machine.Pin("LED", machine.Pin.OUT)
 
 # set up uart0 for communication with BLE UART friend
+# for accepting tele-op joystick commands
 uart0 = UART(0, 9600)
-uart0.init(bits=8, parity=None, stop=1, timeout=10)
+uart0.init(tx=Pin(0), rx=Pin(1), bits=8, parity=None, stop=1, timeout=10)
+
+# set up uart1 for communication with BLE UART friend
+# for sending pose data to laptop
+uart1 = UART(1, 9600)
+uart1.init(tx=Pin(4), rx=Pin(5), bits=8, parity=None, stop=1, timeout=10)
 
 '''
 # set up left & right VCSEL TOF distance sensors
@@ -99,12 +105,23 @@ while True:
                 lin_spd, ang_spd = 0, 0
                 print(e)
 
+            # send commands to motors
+            motors.drive_motors(lin_spd, ang_spd)
+
             # get latest encoder values
             enc_a_val = enc_a.value()
             enc_b_val = enc_b.value()
 
-            # send commands to motors
-            motors.drive_motors(lin_spd, ang_spd)
+            # get current pose
+            pose = odom.update(enc_a_val, enc_b_val)
+
+            # send pose data to laptop
+            pose_data = list(pose)
+            data = pose_data
+            data.append(yaw)
+            str_data = ', '.join(str(n) for n in data)
+            uart1.write(str_data + "\n")
+            print(str_data + "\n")
 
         led.toggle()
 
